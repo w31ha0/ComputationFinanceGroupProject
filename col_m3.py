@@ -2,8 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from scipy.stats import norm
 
-# Defining the relevant functions
-
 T = 1
 L = 150
 S_0 = 100
@@ -58,11 +56,6 @@ def simulatePricePath(frequency, S_0, r, sigma, T, path_total, Z):
         dT = T/frequency
         share_price_path = share_path(S_0, r, sigma, Z, dT)
         return [x + y for x, y in zip(path_total, share_price_path)]
-
-
-# Simulating the price depending on the current spot
-# barrier is at 2.5
-# strike price is at 0.5
 
 #spot = np.linspace(0, 3, 100)
 #prices = [price_up_and_out_european_barrier_call(2.5, s) for s in spot]
