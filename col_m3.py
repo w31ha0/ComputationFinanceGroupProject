@@ -52,10 +52,8 @@ def price_up_and_out_european_barrier_call(barrier, S_0, N = 500, K = 0.5):
                         prices.append(european_call_payoff(path[-1], K)) 
         return np.mean(prices)
     
-def simulatePricePath(frequency, S_0, r, sigma, T, path_total, Z):
-        dT = T/frequency
-        share_price_path = share_path(S_0, r, sigma, Z, dT)
-        return [x + y for x, y in zip(path_total, share_price_path)]
+def sumUpPricePath(path, path_total):
+    return [x + y for x, y in zip(path_total, path)]
 
 #spot = np.linspace(0, 3, 100)
 #prices = [price_up_and_out_european_barrier_call(2.5, s) for s in spot]
@@ -70,13 +68,15 @@ for sampleSize in range(1000, 51000, 1000):
     for i in range(0, sampleSize):
         norm_matrix = norm.rvs(size=np.array([2, frequency]))
         corr_norm_matrix = np.matmul(np.linalg.cholesky(corr_matrix), norm_matrix)
-        share_path_total = simulatePricePath(frequency, S_0, r, sigma_s, T, share_path_total, corr_norm_matrix[0,])
-        firm_value_total = simulatePricePath(frequency, V_0, r, sigma_v, T, firm_value_total, corr_norm_matrix[1,])
+        share_price_path = share_path(S_0, r, sigma_s, corr_norm_matrix[0,], T/frequency)
+        firm_value_path = share_path(V_0, r, sigma_v, corr_norm_matrix[1,], T/frequency)
+        share_path_total = sumUpPricePath(share_price_path, share_path_total)
+        firm_value_total = sumUpPricePath(firm_value_path, firm_value_total)
         
     #get the mean path for the sum of all the simulations
-    share_path_total = list(map(lambda totalShare: totalShare/sampleSize, share_path_total))
-    firm_value_total = list(map(lambda totalShare: totalShare/sampleSize, firm_value_total))
+    share_path_mean = list(map(lambda totalShare: totalShare/sampleSize, share_path_total))
+    firm_value_mean = list(map(lambda totalShare: totalShare/sampleSize, firm_value_total))
     print("Sample Size: " + str(sampleSize))
-    print("Share price path is " + str(share_path_total))
-    print("Firm value path is " + str(firm_value_total))
+    print("Share price path is " + str(share_path_mean))
+    print("Firm value path is " + str(firm_value_mean))
     print("\n")
