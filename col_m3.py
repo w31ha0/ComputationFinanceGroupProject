@@ -22,6 +22,7 @@ corr_matrix = np.array([[1, correlation], [correlation, 1]])
 def share_path(S_0, r, sigma, Z, dT):
     return S_0 * np.exp(np.cumsum((r - sigma**2/2) * dT + sigma * np.sqrt(dT) * Z))
 
+# Might be safer to use share_path as in the lecture notes
 def geometric_brownian_motion(N = 200, T = 1, S_0 = 1, mu=0.08, sigma = 0.05):
         """N is the number of steps, T is the time of expiry,
         S_0 is the beginning value, sigma is standard deviation"""
