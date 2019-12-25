@@ -54,7 +54,7 @@ def simulatePricePath(frequency, S_0, r, sigma, T, path_total):
         dT = T/frequency
         Z = norm.rvs(size=frequency)
         share_price_path = share_path(S_0, r, sigma, Z, dT)
-        path_total = [x + y for x, y in zip(path_total, share_price_path)]
+        return [x + y for x, y in zip(path_total, share_price_path)]
 
 
 # Simulating the price depending on the current spot
@@ -71,11 +71,13 @@ for noOfSimulations in range(1000, 51000, 1000):
     firm_value_total = [0] * frequency
     
     for i in range(0, noOfSimulations):
-        simulatePricePath(frequency, S_0, r, sigma_s, T, share_path_total)
-        simulatePricePath(frequency, V_0, r, sigma_v, T, firm_value_total)
+        share_path_total = simulatePricePath(frequency, S_0, r, sigma_s, T, share_path_total)
+        firm_value_total = simulatePricePath(frequency, V_0, r, sigma_v, T, firm_value_total)
         
     #get the mean path for the sum of all the simulations
     share_path_total = list(map(lambda totalShare: totalShare/noOfSimulations, share_path_total))
     firm_value_total = list(map(lambda totalShare: totalShare/noOfSimulations, firm_value_total))
-    print("Share price path for sample size " + str(noOfSimulations) + " is " + str(share_path_total))
-    print("Firm value path for sample size " + str(noOfSimulations) + " is " + str(firm_value_total))
+    print("Sample Size: " + str(noOfSimulations))
+    print("Share price path is " + str(share_path_total))
+    print("Firm value path is " + str(firm_value_total))
+    print("\n")
