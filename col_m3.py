@@ -62,20 +62,21 @@ def simulatePricePath(frequency, S_0, r, sigma, T, path_total, Z):
 #plt.plot(spot, prices, '--', linewidth=2)
 #plt.show()
 
-for noOfSimulations in range(1000, 51000, 1000):
+for sampleSize in range(1000, 51000, 1000):
     share_path_total = [0] * frequency
     firm_value_total = [0] * frequency
     
-    for i in range(0, noOfSimulations):
+    #for each sample size, sum up all price path for each simulation so that the mean can be calculated later
+    for i in range(0, sampleSize):
         norm_matrix = norm.rvs(size=np.array([2, frequency]))
         corr_norm_matrix = np.matmul(np.linalg.cholesky(corr_matrix), norm_matrix)
         share_path_total = simulatePricePath(frequency, S_0, r, sigma_s, T, share_path_total, corr_norm_matrix[0,])
         firm_value_total = simulatePricePath(frequency, V_0, r, sigma_v, T, firm_value_total, corr_norm_matrix[1,])
         
     #get the mean path for the sum of all the simulations
-    share_path_total = list(map(lambda totalShare: totalShare/noOfSimulations, share_path_total))
-    firm_value_total = list(map(lambda totalShare: totalShare/noOfSimulations, firm_value_total))
-    print("Sample Size: " + str(noOfSimulations))
+    share_path_total = list(map(lambda totalShare: totalShare/sampleSize, share_path_total))
+    firm_value_total = list(map(lambda totalShare: totalShare/sampleSize, firm_value_total))
+    print("Sample Size: " + str(sampleSize))
     print("Share price path is " + str(share_path_total))
     print("Firm value path is " + str(firm_value_total))
     print("\n")
