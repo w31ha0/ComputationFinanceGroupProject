@@ -15,6 +15,9 @@ D = 175
 corr = 0.2
 recovery_rate = 0.25
 frequency = 12
+correlation = 0.2
+
+corr_matrix = np.array([[1, correlation], [correlation, 1]])
 
 def share_path(S_0, r, sigma, Z, dT):
     return S_0 * np.exp(np.cumsum((r - sigma**2/2) * dT + sigma * np.sqrt(dT) * Z))
@@ -50,9 +53,8 @@ def price_up_and_out_european_barrier_call(barrier, S_0, N = 500, K = 0.5):
                         prices.append(european_call_payoff(path[-1], K)) 
         return np.mean(prices)
     
-def simulatePricePath(frequency, S_0, r, sigma, T, path_total):
+def simulatePricePath(frequency, S_0, r, sigma, T, path_total, Z):
         dT = T/frequency
-        Z = norm.rvs(size=frequency)
         share_price_path = share_path(S_0, r, sigma, Z, dT)
         return [x + y for x, y in zip(path_total, share_price_path)]
 
@@ -71,8 +73,10 @@ for noOfSimulations in range(1000, 51000, 1000):
     firm_value_total = [0] * frequency
     
     for i in range(0, noOfSimulations):
-        share_path_total = simulatePricePath(frequency, S_0, r, sigma_s, T, share_path_total)
-        firm_value_total = simulatePricePath(frequency, V_0, r, sigma_v, T, firm_value_total)
+        norm_matrix = norm.rvs(size=np.array([2, frequency]))
+        corr_norm_matrix = np.matmul(np.linalg.cholesky(corr_matrix), norm_matrix)
+        share_path_total = simulatePricePath(frequency, S_0, r, sigma_s, T, share_path_total, corr_norm_matrix[0,])
+        firm_value_total = simulatePricePath(frequency, V_0, r, sigma_v, T, firm_value_total, corr_norm_matrix[1,])
         
     #get the mean path for the sum of all the simulations
     share_path_total = list(map(lambda totalShare: totalShare/noOfSimulations, share_path_total))
