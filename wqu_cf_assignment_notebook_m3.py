@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1NTpBk334l915KwPbczd28Jm-s9X7-QSY
 """
 
-!pip install tqdm
+#!pip install tqdm
 
 # Commented out IPython magic to ensure Python compatibility.
 import numpy as np
@@ -38,7 +38,7 @@ def euro_uao_call(barrier, paths, K, r, T):
             if np.max(path) > barrier: # knocked out
                     prices.append(0)
             else:
-                    prices.append(european_call_payoff(path, K, r, T)) 
+                    prices.append(european_call_payoff(path[-1], K, r, T)) 
     return np.mean(prices)
     
 def sumUpPricePath(path, path_total):
@@ -67,6 +67,7 @@ fig, ax = plt.subplots(13,4, sharex=True, sharey=True)
 plt.xticks (range (1,13))
 plt.ylabel ('USD')
 
+'''
 for sampleSize in tqdm(range(1000, 51000, 1000)):
     share_path_total = [0] * frequency
     firm_value_total = [0] * frequency
@@ -105,7 +106,7 @@ for sampleSize in tqdm(range(1000, 51000, 1000)):
     
 #     print("\n")
     
-plt.show()
+plt.show()'''
 
 #2. Determine Monte Carlo estimates of both the default-free value of the option and the Credit Valuation Adjustment (CVA).
 #3. Calculate the Monte Carlo estimates for the price of the option incorporating counterparty risk, given by the default-free price less the CVA.
@@ -116,12 +117,19 @@ for sampleSize in tqdm(range(1000, 51000, 1000)):
     share_path_total = [0] * frequency
     firm_value_total = [0] * frequency
     
+    share_path_list = []
+    firm_value_list = []
+    
     #for each sample size, sum up all price path for each simulation so that the mean can be calculated later
     for i in range(0, sampleSize):
         norm_matrix = norm.rvs(size=np.array([2, frequency]))
         corr_norm_matrix = np.matmul(np.linalg.cholesky(corr_matrix), norm_matrix)
+        
         share_price_path = share_path(S_0, r, sigma_s, corr_norm_matrix[0,], T/frequency)
+        share_path_list.append(share_price_path)
         firm_value_path = share_path(V_0, r, sigma_v, corr_norm_matrix[1,], T/frequency)
+        firm_value_list.append(firm_value_path)
+        
         share_path_total = sumUpPricePath(share_price_path, share_path_total)
         firm_value_total = sumUpPricePath(firm_value_path, firm_value_total)
 
@@ -133,7 +141,7 @@ for sampleSize in tqdm(range(1000, 51000, 1000)):
     #######     terminal value of option   #########
     ################################################
 
-    call_val = euro_uao_call(L, share_path_mean, K, r, T/frequency)
+    call_val = euro_uao_call(L, share_path_list, K, r, T/frequency)
     call_opt_val = np.append(call_opt_val, call_val)
 
     ################################################
