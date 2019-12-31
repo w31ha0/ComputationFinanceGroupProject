@@ -14,6 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from scipy.stats import norm
 from tqdm import tqdm
+import functools 
 
 # %matplotlib inline
 
@@ -40,9 +41,6 @@ def euro_uao_call(barrier, paths, K, r, T):
             else:
                     prices.append(european_call_payoff(path[-1], K, r, T)) 
     return np.mean(prices)
-    
-def sumUpPricePath(path, path_total):
-    return [x + y for x, y in zip(path_total, path)]
 
 T = 1
 L = 150
@@ -60,33 +58,36 @@ correlation = 0.2
 
 corr_matrix = np.array([[1, correlation], [correlation, 1]])
 
-# 1. Simulate paths for the underlying share and for the counterparty’s firm value using sample sizes of 1000, 2000, ..., 50000. 
-# Do monthly simulations for the lifetime of the option.
 plt.rcParams["figure.figsize"] = (30,20)
 fig, ax = plt.subplots(13,4, sharex=True, sharey=True)
 plt.xticks (range (1,13))
 plt.ylabel ('USD')
 
-'''
-for sampleSize in tqdm(range(1000, 51000, 1000)):
-    share_path_total = [0] * frequency
-    firm_value_total = [0] * frequency
+# 1. Simulate paths for the underlying share and for the counterparty’s firm value using sample sizes of 1000, 2000, ..., 50000. 
+# Do monthly simulations for the lifetime of the option.
+#2. Determine Monte Carlo estimates of both the default-free value of the option and the Credit Valuation Adjustment (CVA).
+#3. Calculate the Monte Carlo estimates for the price of the option incorporating counterparty risk, given by the default-free price less the CVA.
+
+call_opt_val, cva_estimates, cva_std = np.array([]), np.array([]), np.array([])
+
+for sampleSize in tqdm(range(1000, 51000, 1000)):    
+    share_path_list = []
+    firm_value_list = []
     
     #for each sample size, sum up all price path for each simulation so that the mean can be calculated later
     for i in range(0, sampleSize):
         norm_matrix = norm.rvs(size=np.array([2, frequency]))
         corr_norm_matrix = np.matmul(np.linalg.cholesky(corr_matrix), norm_matrix)
+        
         share_price_path = share_path(S_0, r, sigma_s, corr_norm_matrix[0,], T/frequency)
         firm_value_path = share_path(V_0, r, sigma_v, corr_norm_matrix[1,], T/frequency)
-        share_path_total = sumUpPricePath(share_price_path, share_path_total)
-        firm_value_total = sumUpPricePath(firm_value_path, firm_value_total)
-        
+        share_path_list.append(share_price_path)
+        firm_value_list.append(firm_value_path)
+
     #get the mean path for the sum of all the simulations
-    share_path_mean = list(map(lambda totalShare: totalShare/sampleSize, share_path_total))
-    firm_value_mean = list(map(lambda totalShare: totalShare/sampleSize, firm_value_total))
-#     print("Sample Size: " + str(sampleSize))
-#     print("Share price path is " + str(share_path_mean))
-#     print("Firm value path is " + str(firm_value_mean))
+    share_path_mean = list(map(lambda summed: summed/sampleSize,  functools.reduce(lambda a,b: [x + y for x, y in zip(a, b)], share_path_list)))
+    firm_value_mean = list(map(lambda summed: summed/sampleSize,  functools.reduce(lambda a,b: [x + y for x, y in zip(a, b)], firm_value_list)))
+        
     row_id = int ((sampleSize / 1000) / 4)
     col_id = int ((sampleSize/1000) % 4 - 1)
     if col_id == -1:
@@ -97,45 +98,14 @@ for sampleSize in tqdm(range(1000, 51000, 1000)):
     ax [row_id, col_id].plot (firm_value_mean, label = 'Firm Value Path')
     if row_id == 0 and col_id == 0:
         ax [row_id, col_id].legend()
-#     plt.title ('Sample Size = ' + str(sampleSize))
-#     plt.plot (share_path_mean, label = 'Share Price Path')
-#     plt.plot (firm_value_mean, label = 'Firm Value Path')
-#     plt.xlabel ('Month')
+    plt.title ('Sample Size = ' + str(sampleSize))
+    plt.plot (share_path_mean, label = 'Share Price Path')
+    plt.plot (firm_value_mean, label = 'Firm Value Path')
+    plt.xlabel ('Month')
     
-#     plt.legend()
+    plt.legend()
     
-#     print("\n")
-    
-plt.show()'''
-
-#2. Determine Monte Carlo estimates of both the default-free value of the option and the Credit Valuation Adjustment (CVA).
-#3. Calculate the Monte Carlo estimates for the price of the option incorporating counterparty risk, given by the default-free price less the CVA.
-
-call_opt_val, cva_estimates, cva_std = np.array([]), np.array([]), np.array([])
-
-for sampleSize in tqdm(range(1000, 51000, 1000)):
-    share_path_total = [0] * frequency
-    firm_value_total = [0] * frequency
-    
-    share_path_list = []
-    firm_value_list = []
-    
-    #for each sample size, sum up all price path for each simulation so that the mean can be calculated later
-    for i in range(0, sampleSize):
-        norm_matrix = norm.rvs(size=np.array([2, frequency]))
-        corr_norm_matrix = np.matmul(np.linalg.cholesky(corr_matrix), norm_matrix)
-        
-        share_price_path = share_path(S_0, r, sigma_s, corr_norm_matrix[0,], T/frequency)
-        share_path_list.append(share_price_path)
-        firm_value_path = share_path(V_0, r, sigma_v, corr_norm_matrix[1,], T/frequency)
-        firm_value_list.append(firm_value_path)
-        
-        share_path_total = sumUpPricePath(share_price_path, share_path_total)
-        firm_value_total = sumUpPricePath(firm_value_path, firm_value_total)
-
-    #get the mean path for the sum of all the simulations
-    share_path_mean = list(map(lambda totalShare: totalShare/sampleSize, share_path_total))
-    firm_value_mean = list(map(lambda totalShare: totalShare/sampleSize, firm_value_total))
+    print("\n")
 
     ################################################
     #######     terminal value of option   #########
@@ -152,6 +122,7 @@ for sampleSize in tqdm(range(1000, 51000, 1000)):
     cva_estimates = np.append(cva_estimates, np.mean(amount_lost))
     cva_std = np.append(cva_std, (np.std(amount_lost) / np.sqrt(frequency)))
 
+plt.show()
 #2a. Determine Monte Carlo estimates of the default-free value of the option 
 #2b. Determine Monte Carlo estimates of the Credit Valuation Adjustment (CVA)
 #3. Calculate the Monte Carlo estimates for counterparty risk
