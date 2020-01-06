@@ -42,19 +42,18 @@ def euro_uao_call(barrier, paths, K, r, T):
                     prices.append(european_call_payoff(path[-1], K, r, T)) 
     return np.mean(prices)
 
-T = 1
-L = 150
-S_0 = 100
-K = 100
-V_0 = 100
-r = 0.08
-sigma_s = 0.30
-sigma_v = 0.25
-debt = 175
-corr = 0.2
-recovery_rate = 0.25
-frequency = 12
-correlation = 0.2
+T = 1                   #expiry time of option
+L = 150                 #barrier limit
+S_0 = 100               #starting share value
+K = 100                 #strike price
+V_0 = 100               #starting firm value
+r = 0.08                #interest rate
+sigma_s = 0.30          #share volatility
+sigma_v = 0.25          #firm value volatility
+debt = 175              #firm debt
+correlation = 0.2       #correlation between share and firm
+recovery_rate = 0.25    #firm recovery rate
+frequency = 12          #monthly simulations for a year
 
 corr_matrix = np.array([[1, correlation], [correlation, 1]])
 
@@ -67,8 +66,6 @@ plt.ylabel ('USD')
 # Do monthly simulations for the lifetime of the option.
 #2. Determine Monte Carlo estimates of both the default-free value of the option and the Credit Valuation Adjustment (CVA).
 #3. Calculate the Monte Carlo estimates for the price of the option incorporating counterparty risk, given by the default-free price less the CVA.
-
-call_opt_val, cva_estimates, cva_std = np.array([]), np.array([]), np.array([])
 
 for sampleSize in tqdm(range(1000, 51000, 1000)):    
     share_path_list = []
@@ -111,29 +108,28 @@ for sampleSize in tqdm(range(1000, 51000, 1000)):
     #######     terminal value of option   #########
     ################################################
 
-    call_val = euro_uao_call(L, share_path_list, K, r, T/frequency)
-    call_opt_val = np.append(call_opt_val, call_val)
+    call_val = euro_uao_call(L, share_path_list, K, r, T)
+    
+    term_firm_values = list(map(lambda x: x[-1], firm_value_list))
 
     ################################################
     #######               CVA              #########
     ################################################
-
-    amount_lost = [np.exp(-T/frequency*r) * (1-recovery_rate)*(term_firm_val < debt) * call_val for term_firm_val in firm_value_mean]
-    cva_estimates = np.append(cva_estimates, np.mean(amount_lost))
-    cva_std = np.append(cva_std, (np.std(amount_lost) / np.sqrt(frequency)))
-
-plt.show()
-#2a. Determine Monte Carlo estimates of the default-free value of the option 
-#2b. Determine Monte Carlo estimates of the Credit Valuation Adjustment (CVA)
-#3. Calculate the Monte Carlo estimates for counterparty risk
-
-# print out the call_opt_val, cva_estimates and cva_std
-counter_party_risk = call_opt_val - cva_estimates
-
-for sampleSize, w, x, y, z in zip(range(1000, 51000, 1000), call_opt_val, cva_estimates, cva_std, counter_party_risk):
+    #2a. Determine Monte Carlo estimates of the default-free value of the option 
+    #2b. Determine Monte Carlo estimates of the Credit Valuation Adjustment (CVA)
+    #3. Calculate the Monte Carlo estimates for counterparty risk
+    
+    # print out the call_opt_val, cva_estimates and cva_std
+    amount_lost = [np.exp(-T/frequency*r) * (1-recovery_rate)*(term_firm_val < debt) * call_val for term_firm_val in term_firm_values]
+    cva = np.mean(amount_lost)
+    adjusted_opt_val = call_val - cva
+   
     print('-' * 20)
     print("For sample Size: " + str(sampleSize))
-    print("The European up-and-out call option price is {}.".format(w))
-    print("The mean Credit Valuation Adjustment is {}.".format(x))
-    print("The counter party risk is {}.".format(z))
+    print("The European up-and-out call option price is {}.".format(call_val))
+    print("The Credit Valuation Adjustment is {}.".format(cva))
+    print("The option after cva is {}.".format(adjusted_opt_val))
     print('-' * 20)
+
+plt.show()
+
