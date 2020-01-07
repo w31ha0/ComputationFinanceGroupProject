@@ -67,7 +67,11 @@ plt.ylabel ('USD')
 #2. Determine Monte Carlo estimates of both the default-free value of the option and the Credit Valuation Adjustment (CVA).
 #3. Calculate the Monte Carlo estimates for the price of the option incorporating counterparty risk, given by the default-free price less the CVA.
 
-for sampleSize in tqdm(range(1000, 51000, 1000)):    
+call_val_list = []
+cva_list = []
+adjusted_call_list = []
+
+for sampleSize in tqdm(range(1000, 51000, 1000)):
     share_path_list = []
     firm_value_list = []
     
@@ -75,7 +79,6 @@ for sampleSize in tqdm(range(1000, 51000, 1000)):
     for i in range(0, sampleSize):
         norm_matrix = norm.rvs(size=np.array([2, frequency]))
         corr_norm_matrix = np.matmul(np.linalg.cholesky(corr_matrix), norm_matrix)
-        
         share_price_path = share_path(S_0, r, sigma_s, corr_norm_matrix[0,], T/frequency)
         firm_value_path = share_path(V_0, r, sigma_v, corr_norm_matrix[1,], T/frequency)
         share_path_list.append(share_price_path)
@@ -84,52 +87,46 @@ for sampleSize in tqdm(range(1000, 51000, 1000)):
     #get the mean path for the sum of all the simulations
     share_path_mean = list(map(lambda summed: summed/sampleSize,  functools.reduce(lambda a,b: [x + y for x, y in zip(a, b)], share_path_list)))
     firm_value_mean = list(map(lambda summed: summed/sampleSize,  functools.reduce(lambda a,b: [x + y for x, y in zip(a, b)], firm_value_list)))
-        
-    row_id = int ((sampleSize / 1000) / 4)
-    col_id = int ((sampleSize/1000) % 4 - 1)
-    if col_id == -1:
-        col_id = 3
-        row_id -= 1
-    ax [row_id, col_id].title.set_text ('Sample Size = ' + str(sampleSize))
-    ax [row_id, col_id].plot (share_path_mean, label = 'Share Price Path')
-    ax [row_id, col_id].plot (firm_value_mean, label = 'Firm Value Path')
-    if row_id == 0 and col_id == 0:
-        ax [row_id, col_id].legend()
-    plt.title ('Sample Size = ' + str(sampleSize))
-    plt.plot (share_path_mean, label = 'Share Price Path')
-    plt.plot (firm_value_mean, label = 'Firm Value Path')
-    plt.xlabel ('Month')
-    
-    plt.legend()
-    
-    print("\n")
+
+    """Note that the code above is the same as question 1"""
 
     ################################################
     #######     terminal value of option   #########
     ################################################
-
-    call_val = euro_uao_call(L, share_path_list, K, r, T)
-    
+    #print(share_path_list)
+    call_val = euro_uao_call(L, share_path_list, K, r, T) # obtain the Up-and-out European call option value using the defined function euro_uao_call
+    # Extract the terminal firm values
     term_firm_values = list(map(lambda x: x[-1], firm_value_list))
+    
+    # Note: the explanation of the functions are defined above under the "Define functions" section
 
     ################################################
     #######               CVA              #########
     ################################################
-    #2a. Determine Monte Carlo estimates of the default-free value of the option 
-    #2b. Determine Monte Carlo estimates of the Credit Valuation Adjustment (CVA)
-    #3. Calculate the Monte Carlo estimates for counterparty risk
-    
-    # print out the call_opt_val, cva_estimates and cva_std
-    amount_lost = [np.exp(-T/frequency*r) * (1-recovery_rate)*(term_firm_val < debt) * call_val for term_firm_val in term_firm_values]
+
+    # To calculate the amount lost, we apply the formula [np.exp(-T/frequency*r) * (1-recovery_rate)*(term_firm_val < debt) * call_val]
+    # for each simulated terminal firm value in the monte carlo simulation. 
+    amount_lost = [np.exp(-T/frequency*r) * (1-recovery_rate)*(term_firm_val < debt) * call_val for term_firm_val in term_firm_values] # calculate the amount lost
     cva = np.mean(amount_lost)
     adjusted_opt_val = call_val - cva
-   
+    
+    call_val_list.append(call_val)
+    cva_list.append(cva)
+    adjusted_call_list.append(adjusted_opt_val)
+    
     print('-' * 20)
     print("For sample Size: " + str(sampleSize))
     print("The European up-and-out call option price is {}.".format(call_val))
-    print("The Credit Valuation Adjustment is {}.".format(cva))
-    print("The option after cva is {}.".format(adjusted_opt_val))
+    print("The mean Credit Valuation Adjustment is {}.".format(cva))
+    print("The price of the option less the counter party risk is {}.".format(adjusted_opt_val))
     print('-' * 20)
-
+        
+xi = [i for i in range(1000, 51000, 1000)]   
+    
+plt.title ('Option Value, CVA vs Sample Size ')
+plt.plot (xi, call_val_list, label = 'Default Option Price')
+plt.plot (xi, cva_list, label = 'CVA')
+plt.plot (xi, adjusted_call_list, label = 'Adjusted Option Price')
+plt.xlabel ('Sample Size')    
+plt.legend()
 plt.show()
-
