@@ -114,13 +114,10 @@ for sampleSize in tqdm(range(1000, 51000, 1000)):
     cva_list.append(cva)
     adjusted_call_list.append(adjusted_opt_val)
     
-    print('-' * 20)
-    print("For sample Size: " + str(sampleSize))
-    print("The European up-and-out call option price is {}.".format(call_val))
-    print("The mean Credit Valuation Adjustment is {}.".format(cva))
-    print("The price of the option less the counter party risk is {}.".format(adjusted_opt_val))
-    print('-' * 20)
-        
+print("Sample Size\tDefault Option Price\tCVA\t\t\tAdjusted Option Price")
+for sampleSize, call, cva, adj in zip(range(1000, 51000, 1000), call_val_list, cva_list, adjusted_call_list):
+    print(str(sampleSize)+"\t\t"+str(call)+"\t"+str(cva)+"\t"+str(adj))    
+
 xi = [i for i in range(1000, 51000, 1000)]   
     
 plt.title ('Option Value, CVA vs Sample Size ')
